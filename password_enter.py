@@ -1,73 +1,100 @@
-# libraries Import
-from tkinter import *
-import customtkinter
-from csv_rw import *
+import logging
+from pathlib import Path
 from tkinter import messagebox
+import customtkinter as ctk
 
+from csv_rw import write_txt
 
-def pe():
-    # Main Window Properties
+# --- Logging Configuration ---
+LOG_FILE = Path(__file__).parent / "password_enter.log"
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE, mode="a", encoding="utf-8"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
-    window = Tk()
-    window.title("Tkinter")
-    window.geometry("250x200")
-    window.configure(bg="#5e5e5e")
+class PasswordEntryApp(ctk.CTk):
+    PWD_FILE = Path(__file__).parent / "password.txt"
 
-    def done():
-        write_txt('password.txt', password_entry.get())
-        messagebox.showinfo('Password entered', 'You may close this window')
+    def __init__(self):
+        super().__init__()
+        logger.info("Launching PasswordEntryApp")
 
+        # Window setup
+        self.title("Enter Password")
+        self.geometry("250x200")
+        self.configure(bg_color="#D3D3D3")          # light grey background
+        ctk.set_appearance_mode("light")           # ensure light theme
 
-    done_button = customtkinter.CTkButton(
-        master=window,
-        text="Done",
-        font=("undefined", 14),
-        text_color="#000000",
-        hover=True,
-        hover_color="#949494",
-        height=30,
-        width=95,
-        border_width=2,
-        corner_radius=6,
-        border_color="#000000",
-        bg_color="#5e5e5e",
-        fg_color="#F0F0F0",
-        command=done
-    )
-    done_button.place(x=70, y=140)
-    title_label = customtkinter.CTkLabel(
-        master=window,
-        text="Enter Password Here",
-        font=("Arial", 14),
-        text_color="#000000",
-        height=30,
-        width=150,
-        corner_radius=0,
-        bg_color="#5e5e5e",
-        fg_color="#5e5e5e",
-    )
-    title_label.place(x=50, y=20)
-    password_entry = customtkinter.CTkEntry(
-        master=window,
-        placeholder_text="Password",
-        placeholder_text_color="#454545",
-        font=("Arial", 14),
-        text_color="#000000",
-        height=30,
-        width=195,
-        border_width=2,
-        corner_radius=6,
-        border_color="#000000",
-        bg_color="#5e5e5e",
-        fg_color="#F0F0F0",
-        show='•'
-    )
-    password_entry.place(x=20, y=80)
-    password_entry.focus_force()
+        # State variable
+        self.password = ctk.StringVar()
 
-    # run the main loop
-    window.mainloop()
+        # Build + place widgets
+        self._build_widgets()
+        self._place_widgets()
 
+    def _build_widgets(self):
+        # Title label
+        self.lbl_title = ctk.CTkLabel(
+            master=self,
+            text="Enter Password Here",
+            font=("Arial", 14),
+            text_color="#333333",                   # dark text
+            bg_color="#D3D3D3"                      # match window bg
+        )
 
-if __name__ == '__main__':
-    pe()
+        # Password entry
+        self.entry_password = ctk.CTkEntry(
+            master=self,
+            textvariable=self.password,
+            placeholder_text="Password",
+            placeholder_text_color="#666666",
+            font=("Arial", 14),
+            text_color="#333333",
+            show="•",
+            width=195,
+            border_width=2,
+            corner_radius=6,
+            border_color="#666666",
+            fg_color="#FFFFFF",                     # white field
+            bg_color="#D3D3D3"
+        )
+
+        # Done button
+        self.btn_done = ctk.CTkButton(
+            master=self,
+            text="Done",
+            font=("Arial", 14),
+            text_color="#333333",
+            width=95,
+            height=30,
+            border_width=2,
+            corner_radius=6,
+            border_color="#666666",
+            fg_color="#EFEFEF",                     # very light grey
+            hover_color="#CCCCCC",
+            command=self._on_done
+        )
+
+    def _place_widgets(self):
+        pad = {"padx": 20, "pady": 10}
+
+        self.lbl_title.grid(row=0, column=0, columnspan=2, **pad)
+        self.entry_password.grid(row=1, column=0, columnspan=2, **pad)
+        self.btn_done.grid(row=2, column=0, columnspan=2, **pad)
+
+        self.entry_password.focus_force()
+
+    def _on_done(self):
+        pw = self.password.get()
+        write_txt(self.PWD_FILE, pw)
+        messagebox.showinfo("Password entered", "You may close this window")
+        logger.info("Password written to %s", self.PWD_FILE)
+
+if __name__ == "__main__":
+    app = PasswordEntryApp()
+    app.mainloop()

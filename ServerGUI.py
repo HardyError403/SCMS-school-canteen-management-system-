@@ -1,529 +1,116 @@
-# libraries Import
-from tkinter import *
-import customtkinter
-import ServerMain
+import customtkinter as ctk
 from tkinter import messagebox
+import ServerMain
 
-b = ServerMain.Brain
-print(b().set_up())
+class CanteenUI:
+    def __init__(self, root):
+        self.brain = ServerMain.Brain()
+        self.root = root
+        self.root.title("SCMS - Canteen Side")
+        # Don’t set a fixed geometry; we’ll size it to fit.
 
+        self.entries = {}
+        self._build_header()
+        self._build_food_entries()
+        self._build_soup_section()
+        self._build_price_section()
+        self._build_done_button()
 
-def save():
-    # food names
-    temp = b().set_up()
-    temp[1][1] = food1_name_entry.get()
-    temp[2][1] = food2_name_entry.get()
-    temp[3][1] = food3_name_entry.get()
-    temp[4][1] = food4_name_entry.get()
-    temp[5][1] = food5_name_entry.get()
-    temp[6][1] = food6_name_entry.get()
-    temp[7][1] = food7_name_entry.get()
-    temp[8][1] = food8_name_entry.get()
-    temp[9][1] = food9_name_entry.get()
-    # b().save_data(1, 1, food1_name_entry.get())
-    # b().save_data(2, 1, food2_name_entry.get())
-    # b().save_data(3, 1, food3_name_entry.get())
-    # b().save_data(4, 1, food4_name_entry.get())
-    # b().save_data(5, 1, food5_name_entry.get())
-    # b().save_data(6, 1, food6_name_entry.get())
-    # b().save_data(7, 1, food7_name_entry.get())
-    # b().save_data(8, 1, food8_name_entry.get())
-    # b().save_data(9, 1, food9_name_entry.get())
-    # the special food
-    if food10_checkbox.get() == 1:
-        temp[10][1] = food10_name_entry.get()
-        # b().save_data(10, 1, food9_name_entry.get())
-    else:
-        temp[10][1] = 'No tenth food for today!'
-        # b().save_data(10, 1, 'No tenth food for today!')
+        # After all widgets are laid out, force an update
+        self.root.update_idletasks()
+        # Query the size needed to display everything
+        # width  = self.root.winfo_reqwidth()
+        # height = self.root.winfo_reqheight()
+        # Apply that as the window’s geometry
+        self.root.geometry("700x600")
 
-    temp[11][1] = soup_name_entry.get()
-    temp[11][3] = soup_price_entry.get()
+    def _build_header(self):
+        title = ctk.CTkLabel(
+            master=self.root,
+            text="School Canteen Management System",
+            font=("Arial", 20)
+        )
+        title.grid(row=0, column=0, columnspan=4, pady=(10, 20))
 
-    # write price
-    for i in range(1, 11):
-        temp[i][3] = price_entry.get()
-        # b().save_data(i, 3, price_entry.get()
+    def _build_food_entries(self):
+        frame = ctk.CTkFrame(master=self.root)
+        frame.grid(row=1, column=0, columnspan=4, sticky="nsew", padx=10)
 
-    # combo price
-    for i in range(1, 11):
-        temp[i][4] = combo_add_price_entry.get()
-        # b().save_data(i, 4, combo_add_price_entry.get())
+        for idx in range(1, 10):
+            lbl = ctk.CTkLabel(frame, text=f"{idx}.", font=("Arial", 14))
+            ent = ctk.CTkEntry(frame, placeholder_text="Type food name...", font=("Arial", 14))
+            lbl.grid(row=idx-1, column=0, padx=5, pady=3, sticky="e")
+            ent.grid(row=idx-1, column=1, padx=5, pady=3, sticky="w")
+            self.entries[f"food{idx}"] = ent
 
-    print(temp)
+        # Tenth food with checkbox
+        self.enable_10th = ctk.CTkCheckBox(frame, text="Enable 10.", command=self._toggle_10th)
+        self.enable_10th.grid(row=9, column=0, padx=5, pady=3, sticky="e")
+        tenth_ent = ctk.CTkEntry(frame, placeholder_text="Type food name...", font=("Arial", 14))
+        tenth_ent.configure(state="disabled")
+        tenth_ent.grid(row=9, column=1, padx=5, pady=3, sticky="w")
+        self.entries["food10"] = tenth_ent
 
-    if b().save(temp):
-        messagebox.showinfo('Saved', 'Today\'s meal has been saved')
+    def _toggle_10th(self):
+        state = "normal" if self.enable_10th.get() else "disabled"
+        self.entries["food10"].configure(state=state)
 
+    def _build_soup_section(self):
+        ctk.CTkLabel(self.root, text="Soup", font=("Arial", 14))\
+            .grid(row=1, column=4, padx=5, pady=3, sticky="e")
+        self.entries["soup_name"] = ctk.CTkEntry(self.root, placeholder_text="Soup name", font=("Arial", 14))
+        self.entries["soup_name"].grid(row=1, column=5, padx=5, pady=3)
 
-# Main Window Properties
-window = Tk()
-window.title("SCMS-Canteen Side")
-window.geometry("1000x350")
-window.configure(bg="#00ff88")
+        ctk.CTkLabel(self.root, text="Soup ($)", font=("Arial", 14))\
+            .grid(row=2, column=4, padx=5, pady=3, sticky="e")
+        self.entries["soup_price"] = ctk.CTkEntry(self.root, placeholder_text="Soup Price", font=("Arial", 14))
+        self.entries["soup_price"].grid(row=2, column=5, padx=5, pady=3)
 
-# Place the Title
-title_label = customtkinter.CTkLabel(
-    master=window,
-    text="School Canteen Management System",
-    font=("Arial", 20),
-    text_color="#000000",
-    height=30,
-    width=400,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-title_label.place(x=210, y=0)
+    def _build_price_section(self):
+        ctk.CTkLabel(self.root, text="Price ($)", font=("Arial", 14))\
+            .grid(row=4, column=0, padx=5, pady=20, sticky="e")
+        self.entries["meal_price"] = ctk.CTkEntry(self.root, placeholder_text="Each meal price", font=("Arial", 14))
+        self.entries["meal_price"].grid(row=4, column=1, padx=5, pady=20)
 
-# Food
+        ctk.CTkLabel(self.root, text="Combo", font=("Arial", 14))\
+            .grid(row=4, column=2, padx=5, pady=20, sticky="e")
+        self.entries["combo_add"] = ctk.CTkEntry(self.root, placeholder_text="$+?", font=("Arial", 14))
+        self.entries["combo_add"].grid(row=4, column=3, padx=5, pady=20)
 
-# Food Entry 1
-food1_label = customtkinter.CTkLabel(
-    master=window,
-    text="1.",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-food1_label.place(x=0, y=90)
+    def _build_done_button(self):
+        btn = ctk.CTkButton(self.root, text="Done", command=self.save)
+        btn.grid(row=5, column=1, columnspan=2, pady=10)
 
-food1_name_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Type food name here...",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-food1_name_entry.place(x=100, y=90)
+    def save(self):
+        data = self.brain.set_up()
+        try:
+            # Food names
+            for i in range(1, 11):
+                key = f"food{i}"
+                name = self.entries[key].get()
+                if i == 10 and not self.enable_10th.get():
+                    name = "No tenth food for today!"
+                data[i][1] = name
 
-# Food Entry 2
+            # Soup
+            data[11][1] = self.entries["soup_name"].get()
+            data[11][3] = float(self.entries["soup_price"].get())
 
-food2_label = customtkinter.CTkLabel(
-    master=window,
-    text="2.",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-food2_label.place(x=0, y=120)
+            # Prices
+            price = float(self.entries["meal_price"].get())
+            combo = float(self.entries["combo_add"].get())
+            for i in range(1, 11):
+                data[i][3], data[i][4] = price, combo
 
-food2_name_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Type food name here...",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-food2_name_entry.place(x=100, y=120)
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter valid numbers for prices.")
+            return
 
-# Food Entry 3
+        if self.brain.save(data):
+            messagebox.showinfo("Saved", "Today's meal has been saved.")
 
-food3_label = customtkinter.CTkLabel(
-    master=window,
-    text="3.",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-food3_label.place(x=0, y=150)
-
-food3_name_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Type food name here...",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-food3_name_entry.place(x=100, y=150)
-
-# Food Entry 4
-
-food4_label = customtkinter.CTkLabel(
-    master=window,
-    text="4.",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-food4_label.place(x=0, y=180)
-
-food4_name_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Type food name here...",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-food4_name_entry.place(x=100, y=180)
-
-# Food Entry 5
-
-food5_label = customtkinter.CTkLabel(
-    master=window,
-    text="5.",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-food5_label.place(x=0, y=210)
-
-food5_name_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Type food name here...",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-food5_name_entry.place(x=100, y=210)
-
-# Food Entry 6
-
-food6_label = customtkinter.CTkLabel(
-    master=window,
-    text="6.",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-food6_label.place(x=300, y=90)
-
-food6_name_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Type food name here...",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-food6_name_entry.place(x=400, y=90)
-
-# Food Entry 7
-
-food7_label = customtkinter.CTkLabel(
-    master=window,
-    text="7.",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-food7_label.place(x=300, y=120)
-
-food7_name_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Type food name here...",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-food7_name_entry.place(x=400, y=120)
-
-# Food Entry 8
-
-food8_label = customtkinter.CTkLabel(
-    master=window,
-    text="8.",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-food8_label.place(x=300, y=150)
-
-food8_name_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Type food name here...",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-food8_name_entry.place(x=400, y=150)
-
-# Food Entry 9
-
-food9_label = customtkinter.CTkLabel(
-    master=window,
-    text="9.",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-food9_label.place(x=300, y=180)
-
-food9_name_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Type food name here...",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-food9_name_entry.place(x=400, y=180)
-
-# Food Entry 10
-
-food10_checkbox = customtkinter.CTkCheckBox(
-    master=window,
-    text="Enable 10.",
-    text_color="#000000",
-    border_color="#000000",
-    fg_color="#808080",
-    hover_color="#808080",
-    corner_radius=4,
-    border_width=2,
-)
-food10_checkbox.place(x=300, y=210)
-
-food10_name_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Type food name here...",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-food10_name_entry.place(x=410, y=210)
-
-# Soup
-soup_label = customtkinter.CTkLabel(
-    master=window,
-    text="Soup",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-soup_label.place(x=600, y=90)
-soup_label = customtkinter.CTkLabel(
-    master=window,
-    text="Soup ($)",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-soup_label.place(x=600, y=120)
-
-soup_name_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Soup name",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-soup_name_entry.place(x=700, y=90)
-
-soup_price_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Soup Price",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-soup_price_entry.place(x=700, y=120)
-# Price setter
-
-# Normal price
-
-price_label = customtkinter.CTkLabel(
-    master=window,
-    text="Price ($)",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-price_label.place(x=0, y=250)
-
-price_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="Price of each meal",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-price_entry.place(x=100, y=250)
-
-# Combo_price
-combo_label = customtkinter.CTkLabel(
-    master=window,
-    text="Combo",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=95,
-    corner_radius=0,
-    bg_color="#00ff88",
-    fg_color="#00ff88",
-)
-combo_label.place(x=310, y=250)
-combo_add_price_entry = customtkinter.CTkEntry(
-    master=window,
-    placeholder_text="$+?",
-    placeholder_text_color="#454545",
-    font=("Arial", 14),
-    text_color="#000000",
-    height=30,
-    width=195,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-)
-combo_add_price_entry.place(x=410, y=250)
-
-# Done button
-
-done_button = customtkinter.CTkButton(
-    master=window,
-    text="Done",
-    font=("Arial", 14),
-    text_color="#000000",
-    hover=True,
-    hover_color="#949494",
-    height=30,
-    width=95,
-    border_width=2,
-    corner_radius=6,
-    border_color="#000000",
-    bg_color="#00ff88",
-    fg_color="#F0F0F0",
-    command=save
-)
-done_button.place(x=290, y=300)
-
-# run the main loop
-window.mainloop()
+if __name__ == "__main__":
+    ctk.set_appearance_mode("light")  # or "dark"
+    root = ctk.CTk()
+    app = CanteenUI(root)
+    root.mainloop()

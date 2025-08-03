@@ -1,234 +1,252 @@
-# libraries Import
-from tkinter import *
-from tkinter import messagebox
-import customtkinter
-from csv_rw import *
 import re
+import csv
+import hashlib
+import logging
+from pathlib import Path
+from tkinter import messagebox
+import customtkinter as ctk
 
-# Main Window Properties
-def am():
-    window = Tk()
-    window.title("Tkinter")
-    window.geometry("375x400")
-    window.configure(bg="#ffea00")
+# --- Logging Configuration ---
+LOG_FILE = Path(__file__).parent / "account_maker.log"
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE, mode="a", encoding="utf-8"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
+# --- Constants ---
+DATA_FILE = Path(__file__).parent / "students.csv"
+SALT = b"some_static_salt"
 
-    # brain
-    def format_data_in_menu(input_list):
-        counter = [0, 0]
-        for i in input_list:
-            # print(i)
-            for j in i:
-                input_list[counter[0]][counter[1]] = re.sub('\t', '', j)
-                counter[1] += 1
-            counter[0] += 1
-            counter[1] = 0
-        # print(input_list)
-        return input_list
+def hash_password(password: str) -> str:
+    hasher = hashlib.sha256()
+    hasher.update(SALT + password.encode("utf-8"))
+    digest = hasher.hexdigest()
+    logger.debug("Hashed password: %s…", digest[:8])
+    return digest
 
+def ensure_data_file():
+    if not DATA_FILE.exists():
+        with open(DATA_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["student_number", "password_hash"])
+        logger.info("Created data file: %s", DATA_FILE)
+    else:
+        logger.debug("Data file exists: %s", DATA_FILE)
 
-    def save_to_file():
-        if new_password_entry.get() != confirm_password_entry.get():
-            messagebox.showwarning('Re-enter Password', 'Confirm Password and new password does not match.')
+class StudentRegisterApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        logger.info("Launching StudentRegisterApp")
+        ensure_data_file()
+
+        # Window setup
+        self.title("Student Register")
+        self.geometry("800x480")
+        self.configure(bg_color="white")
+
+        ctk.set_appearance_mode("light")
+        # keep default accent, but window is white
+
+        # State variables
+        self.student_number   = ctk.StringVar()
+        self.old_password     = ctk.StringVar()
+        self.new_password     = ctk.StringVar()
+        self.confirm_password = ctk.StringVar()
+        self.show_password    = ctk.BooleanVar(value=False)
+
+        # Build + place
+        self._build_widgets()
+        self._place_widgets()
+
+    def _build_widgets(self):
+        # Title
+        self.lbl_title = ctk.CTkLabel(
+            master=self,
+            text="Student Register",
+            font=("Arial", 18, "bold"),
+            text_color="#333",
+            bg_color="white"
+        )
+
+        # Input fields
+        self._add_field("Student Number:",  self.student_number,   row=0,
+                        placeholder="8 digits (e.g. 20001234)")
+        self._add_field("Old Password:",     self.old_password,     row=1, show="*")
+        self._add_field("New Password:",     self.new_password,     row=2, show="*")
+        self._add_field("Confirm Password:", self.confirm_password, row=3, show="*")
+
+        # Password strength meter
+        self.strength_label = ctk.CTkLabel(
+            master=self,
+            text="Strength: Empty",
+            anchor="w",
+            text_color="#333",
+            bg_color="white"
+        )
+        self.strength_bar = ctk.CTkProgressBar(
+            master=self,
+            width=200
+        )
+        self.new_password.trace_add("write", self._update_strength_widgets)
+
+        # Show/hide passwords
+        self.chk_show = ctk.CTkCheckBox(
+            master=self,
+            text="Show Passwords",
+            variable=self.show_password,
+            text_color="#333",
+            bg_color="white",
+            command=self._toggle_password_visibility
+        )
+
+        # Action buttons
+        self.btn_save = ctk.CTkButton(
+            master=self,
+            text="Save",
+            width=100,
+            font=("Arial", 12),
+            command=self._on_save
+        )
+        self.btn_quit = ctk.CTkButton(
+            master=self,
+            text="Quit",
+            fg_color="#e74c3c",
+            hover_color="#ff4d4d",
+            width=100,
+            font=("Arial", 12),
+            command=self.destroy
+        )
+
+    def _add_field(self, label_text, var, row, show=None, placeholder=None):
+        lbl = ctk.CTkLabel(
+            master=self,
+            text=label_text,
+            anchor="w",
+            text_color="#333",
+            bg_color="white",
+            font=("Arial", 12)
+        )
+        entry = ctk.CTkEntry(
+            master=self,
+            textvariable=var,
+            show=show or "",
+            placeholder_text=placeholder or "",
+            width=250,
+            font=("Arial", 12)
+        )
+        setattr(self, f"lbl_{row}", lbl)
+        setattr(self, f"entry_{row}", entry)
+
+    def _place_widgets(self):
+        pad = {"padx": 20, "pady": 10}
+
+        self.lbl_title.grid(row=0, column=0, columnspan=3, pady=(20, 5))
+
+        for row in range(4):
+            getattr(self, f"lbl_{row}").grid(
+                row=row+1, column=0, sticky="w", **pad
+            )
+            getattr(self, f"entry_{row}").grid(
+                row=row+1, column=1, columnspan=2, **pad
+            )
+
+        self.strength_label.grid(row=3, column=3, sticky="w", padx=(10, 0))
+        self.strength_bar.grid(row=3, column=4, sticky="w", padx=10)
+
+        self.chk_show.grid(row=5, column=1, sticky="w", **pad)
+
+        self.btn_save.grid(row=6, column=1, **pad)
+        self.btn_quit.grid(row=6, column=2, **pad)
+
+    def _update_strength_widgets(self, *_):
+        pwd = self.new_password.get()
+        score = sum([
+            len(pwd) >= 8,
+            bool(re.search(r"[A-Z]", pwd)),
+            bool(re.search(r"[a-z]", pwd)),
+            bool(re.search(r"\d", pwd)),
+            bool(re.search(r"\W", pwd)),
+        ])
+        texts  = {0:"Empty",1:"Very Weak",2:"Weak",3:"Fair",4:"Good",5:"Excellent"}
+        colors = {0:"gray",1:"red",2:"red",3:"orange",4:"green",5:"green"}
+        frac   = score / 5.0
+
+        self.strength_label.configure(
+            text=f"Strength: {texts[score]}",
+            text_color=colors[score]
+        )
+        self.strength_bar.set(frac)
+        self.strength_bar.configure(progress_color=colors[score])
+
+        logger.debug("Password strength %d/5 → %s", score, texts[score])
+
+    def _toggle_password_visibility(self):
+        show_char = "" if self.show_password.get() else "*"
+        for r in (1, 2, 3):
+            getattr(self, f"entry_{r}").configure(show=show_char)
+        state = "visible" if show_char == "" else "hidden"
+        logger.info("Passwords are now %s", state)
+
+    def _validate_inputs(self):
+        sn = self.student_number.get()
+        if not re.fullmatch(r"\d{8}", sn):
+            messagebox.showwarning("Invalid", "Enter exactly 8 digits.")
             return False
-        if len(student_number_entry.get()) != 8 or re.search(r'(\d{8})', student_number_entry.get()) is None:
-            messagebox.showwarning('Re-enter student number', 'The student number should be 00000000~99999999')
+        if self.new_password.get() != self.confirm_password.get():
+            messagebox.showwarning("Mismatch", "Passwords must match.")
             return False
-        if student_number_entry.get() == confirm_password_entry.get():
-            messagebox.showwarning('Safety Reminder', 'The password is too weak')
+        if sn == self.new_password.get():
+            messagebox.showwarning("Weak Password", "Password should not match student number.")
             return False
-
-        data_in_file = read_csv('students.csv')
-        data_in_file = data_in_file[0]
-
-        # print(data_in_file)
-        data_in_file = format_data_in_menu(data_in_file)
-        print(data_in_file)
-
-        for i in data_in_file:
-            print(1, i)
-            print(2, old_password_entry.get())
-            if student_number_entry.get() in i:
-                print(True)
-                if old_password_entry.get() == i[1]:
-                    i[1] = confirm_password_entry.get()
-                    print(i[1])
-
-                    write_csv('students.csv', data_in_file)
-
-                    messagebox.showinfo('Saved', 'Password and/or student number saved.')
-                    return True
-                else:
-                    messagebox.showerror('Error!', 'Password does not match!')
-                    return False
-        data_in_file.append([student_number_entry.get(), confirm_password_entry.get()])
-        messagebox.showinfo('Saved', 'Password and/or student number saved.')
-        write_csv('students.csv', data_in_file)
-
-        print(data_in_file)
         return True
 
+    def _read_students(self):
+        with open(DATA_FILE, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+        logger.info("Loaded %d records", len(rows))
+        return rows
 
-    # title
-    title_label = customtkinter.CTkLabel(
-        master=window,
-        text="Student Register",
-        font=("Arial", 14),
-        text_color="#000000",
-        height=30,
-        width=118,
-        corner_radius=0,
-        bg_color="#ffea00",
-        fg_color="#ffea00",
-    )
-    title_label.place(x=90, y=30)
+    def _write_students(self, rows):
+        with open(DATA_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=["student_number","password_hash"])
+            writer.writeheader()
+            writer.writerows(rows)
+        logger.info("Save complete")
 
-    # Student number
-    student_number_label = customtkinter.CTkLabel(
-        master=window,
-        text="Student Number",
-        font=("Arial", 14),
-        text_color="#000000",
-        height=30,
-        width=110,
-        corner_radius=0,
-        bg_color="#ffea00",
-        fg_color="#ffea00",
-    )
-    student_number_label.place(x=0, y=110)
+    def _on_save(self):
+        if not self._validate_inputs():
+            return
 
-    # Student number entry
-    student_number_entry = customtkinter.CTkEntry(
-        master=window,
-        placeholder_text="20XXXXXX",
-        placeholder_text_color="#454545",
-        font=("Arial", 14),
-        text_color="#000000",
-        height=30,
-        width=195,
-        border_width=2,
-        corner_radius=6,
-        border_color="#000000",
-        bg_color="#ffea00",
-        fg_color="#F0F0F0",
-    )
-    student_number_entry.place(x=130, y=110)
+        sn, old_pwd, new_pwd = (
+            self.student_number.get(),
+            self.old_password.get(),
+            self.new_password.get()
+        )
+        new_hash = hash_password(new_pwd)
+        rows     = self._read_students()
 
-    # Old password label
-    old_password_label = customtkinter.CTkLabel(
-        master=window,
-        text="Old password",
-        font=("Arial", 14),
-        text_color="#000000",
-        height=30,
-        width=95,
-        corner_radius=0,
-        bg_color="#ffea00",
-        fg_color="#ffea00",
-    )
-    old_password_label.place(x=0, y=170)
+        for row in rows:
+            if row["student_number"] == sn:
+                if row["password_hash"] != hash_password(old_pwd):
+                    messagebox.showerror("Auth Failed", "Old password is incorrect.")
+                    logger.error("Auth fail for %s", sn)
+                    return
+                row["password_hash"] = new_hash
+                self._write_students(rows)
+                messagebox.showinfo("Updated", "Password updated.")
+                logger.info("Password updated for %s", sn)
+                return
 
-    # Old password Entry
-    old_password_entry = customtkinter.CTkEntry(
-        master=window,
-        placeholder_text="Placeholder",
-        placeholder_text_color="#454545",
-        font=("Arial", 14),
-        text_color="#000000",
-        height=30,
-        width=195,
-        border_width=2,
-        corner_radius=6,
-        border_color="#000000",
-        bg_color="#ffea00",
-        fg_color="#F0F0F0",
-    )
-    old_password_entry.place(x=130, y=170)
+        rows.append({"student_number": sn, "password_hash": new_hash})
+        self._write_students(rows)
+        messagebox.showinfo("Registered", "Student registered.")
+        logger.info("New registration: %s", sn)
 
-    # New password label
-    new_password_label = customtkinter.CTkLabel(
-        master=window,
-        text="Password",
-        font=("Arial", 14),
-        text_color="#000000",
-        height=30,
-        width=95,
-        corner_radius=0,
-        bg_color="#ffea00",
-        fg_color="#ffea00",
-    )
-    new_password_label.place(x=0, y=230)
-
-    # New password Entry
-    new_password_entry = customtkinter.CTkEntry(
-        master=window,
-        placeholder_text="New password",
-        placeholder_text_color="#454545",
-        font=("Arial", 14),
-        text_color="#000000",
-        height=30,
-        width=195,
-        border_width=2,
-        corner_radius=6,
-        border_color="#000000",
-        bg_color="#ffea00",
-        fg_color="#F0F0F0",
-    )
-    new_password_entry.place(x=130, y=230)
-
-    # Confirm password label
-    confirm_password_label = customtkinter.CTkLabel(
-        master=window,
-        text="Confirm Password",
-        font=("Arial", 14),
-        text_color="#000000",
-        height=30,
-        width=121,
-        corner_radius=0,
-        bg_color="#ffea00",
-        fg_color="#ffea00",
-    )
-    confirm_password_label.place(x=0, y=290)
-
-    # Confirm password entry
-    confirm_password_entry = customtkinter.CTkEntry(
-        master=window,
-        placeholder_text="Confirm password",
-        placeholder_text_color="#454545",
-        font=("Arial", 14),
-        text_color="#000000",
-        height=30,
-        width=195,
-        border_width=2,
-        corner_radius=6,
-        border_color="#000000",
-        bg_color="#ffea00",
-        fg_color="#F0F0F0",
-    )
-    confirm_password_entry.place(x=130, y=290)
-
-    # Done
-    done_button = customtkinter.CTkButton(
-        master=window,
-        text="Done",
-        font=("undefined", 14),
-        text_color="#000000",
-        hover=True,
-        hover_color="#949494",
-        height=30,
-        width=95,
-        border_width=2,
-        corner_radius=6,
-        border_color="#000000",
-        bg_color="#ffea00",
-        fg_color="#F0F0F0",
-        command=save_to_file
-    )
-    done_button.place(x=110, y=360)
-
-    # run the main loop
-    window.mainloop()
-
-
-if __name__ == '__main__':
-    am()
+if __name__ == "__main__":
+    app = StudentRegisterApp()
+    app.mainloop()
