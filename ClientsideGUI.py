@@ -21,11 +21,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # --- Constants ---
-MENU_CSV     = Path(__file__).parent / "today_menu.csv"
+MENU_CSV = Path(__file__).parent / "today_menu.csv"
 STUDENTS_CSV = Path(__file__).parent / "students.csv"
-PWD_FILE     = Path(__file__).parent / "password.txt"
-ADMIN_PWD    = "123456"
-MAX_MEALS    = 10
+PWD_FILE = Path(__file__).parent / "password.txt"
+ADMIN_PWD = "123456"
+MAX_MEALS = 10
 
 
 class SCMSClient(ctk.CTk):
@@ -41,11 +41,11 @@ class SCMSClient(ctk.CTk):
 
         # State variables
         self.single_or_combo = ctk.IntVar(value=0)
-        self.meal_vars       = [ctk.IntVar(value=0) for _ in range(MAX_MEALS)]
-        self.soup_var        = ctk.IntVar(value=0)
-        self.price_var       = ctk.StringVar(value="$0.00")
-        self.student_id_var  = ctk.StringVar()
-        self.password_var    = ctk.StringVar()
+        self.meal_vars = [ctk.IntVar(value=0) for _ in range(MAX_MEALS)]
+        self.soup_var = ctk.IntVar(value=0)
+        self.price_var = ctk.StringVar(value="$0.00")
+        self.student_id_var = ctk.StringVar()
+        self.password_var = ctk.StringVar()
 
         # Build + place
         self._build_title()
@@ -116,13 +116,15 @@ class SCMSClient(ctk.CTk):
             master=self,
             variable=self.single_or_combo,
             value=1,
-            text="Single"
+            text="Single",
+            command=self._update_price
         )
         self.rdo_combo = ctk.CTkRadioButton(
             master=self,
             variable=self.single_or_combo,
             value=2,
-            text="Combo"
+            text="Combo",
+            command=self._update_price
         )
         self.rdo_single.grid(row=1, column=2, sticky="w")
         self.rdo_combo.grid(row=1, column=3, sticky="w")
@@ -159,8 +161,10 @@ class SCMSClient(ctk.CTk):
         self.lbl_price.grid(row=10, column=3, sticky="e", padx=10, pady=5)
 
         # Action buttons
-        self.btn_done   = ctk.CTkButton(master=self, text="Done",   command=self._save_order)
-        self.btn_cancel = ctk.CTkButton(master=self, text="Cancel", command=self._reset_ui)
+        self.btn_done = ctk.CTkButton(
+            master=self, text="Done",   command=self._save_order)
+        self.btn_cancel = ctk.CTkButton(
+            master=self, text="Cancel", command=self._reset_ui)
         self.btn_done.grid(row=11, column=2, pady=(15, 10))
         self.btn_cancel.grid(row=11, column=3, pady=(15, 10))
 
@@ -181,7 +185,8 @@ class SCMSClient(ctk.CTk):
             return
 
         if not re.fullmatch(r"\d{8}", sid):
-            messagebox.showerror("Error", "Student number must be exactly 8 digits.")
+            messagebox.showerror(
+                "Error", "Student number must be exactly 8 digits.")
             return
 
         rows = read_csv(STUDENTS_CSV)[0]
@@ -206,30 +211,58 @@ class SCMSClient(ctk.CTk):
         logger.info("Menu loaded and UI updated")
 
     def _update_price(self):
-        menu     = read_csv(MENU_CSV)[0]
+        menu   = read_csv(MENU_CSV)[0]
+        choice = self.single_or_combo.get()
         selected = [i for i, var in enumerate(self.meal_vars, 1) if var.get()]
-        price    = 0
 
-        for idx in selected:
-            col = 3 if len(selected) == 1 else 4
-            price += int(menu[idx][col])
+        # Single mode
+        if choice == 1:
+            if len(selected) != 1:
+                self.price_var.set("$0.00")
+                return
+            idx   = selected[0]
+            price = float(menu[idx][3])
 
+        # Combo mode: pick smallest index + sum of surcharges
+        elif choice == 2:
+            if len(selected) != 2:
+                self.price_var.set("$0.00")
+                return
+
+            # 1) Base = single-price of the meal with smallest index
+            min_idx = min(selected)
+            base_price = float(menu[min_idx][3])
+
+            # 2) Surcharges = last-col combo charges for both meals
+            #    Negative index -1 points at the last column
+            surcharge = float(menu[min_idx][-1])
+
+            price = base_price + surcharge
+
+        else:
+            self.price_var.set("$0.00")
+            return
+
+        # Add soup if checked
         if self.soup_var.get():
-            price += int(menu[11][3])
+            price += float(menu[11][3])
 
         self.price_var.set(f"${price:.2f}")
         logger.debug("Price updated: %s", self.price_var.get())
 
+
     def _save_order(self):
-        choice   = self.single_or_combo.get()
+        choice = self.single_or_combo.get()
         selected = [i for i, var in enumerate(self.meal_vars, 1) if var.get()]
 
         if choice == 1 and len(selected) != 1:
-            messagebox.showwarning("Error", "Single must select exactly 1 meal.")
+            messagebox.showwarning(
+                "Error", "Single must select exactly 1 meal.")
             return
 
         if choice == 2 and len(selected) != 2:
-            messagebox.showwarning("Error", "Combo must select exactly 2 meals.")
+            messagebox.showwarning(
+                "Error", "Combo must select exactly 2 meals.")
             return
 
         if choice not in (1, 2):
@@ -245,7 +278,8 @@ class SCMSClient(ctk.CTk):
 
         write_csv(MENU_CSV, data)
         messagebox.showinfo("Success", "Your order has been saved!")
-        logger.info("Order saved for meals %s with soup=%s", selected, self.soup_var.get())
+        logger.info("Order saved for meals %s with soup=%s",
+                    selected, self.soup_var.get())
 
         self._reset_ui()
 
