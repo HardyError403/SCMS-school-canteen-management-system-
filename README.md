@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Hi there, this is my first project on Github. As well as the first time publishing something online. I made this school canteen managing system because of horrible long queues in front of my canteen. I made use of customtkinker & tkinker's message boxes to create a ordering (paying excluded) app. I hope you like it!
+* [ ]
 
 ## Targeted Users
 
@@ -60,3 +60,8 @@ This is a file that stores all menu's information, and should be kept by canteen
 
 Found Bugs? Post on `Issues` section or mail me (*hardyshang19@gmail.com*)
 Note I am a busy man and a newbie programmer, so please accept my aplogise if I can't solve some of the bugs...
+
+## Next Update checklist
+
+* [ ] Convert .py to .exe
+* [ ] Make this readme better
