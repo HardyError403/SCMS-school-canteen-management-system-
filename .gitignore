@@ -4,4 +4,5 @@
 *.txt
 .vs/
 __pycache__/
+converted/
 *.csv
