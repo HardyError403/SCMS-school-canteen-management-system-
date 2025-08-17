@@ -2,3 +2,6 @@
 *.log
 1.py
 *.txt
+.vs/
+__pycache__/
+*.csv
