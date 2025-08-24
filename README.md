@@ -1,8 +1,8 @@
-> # School Canteen Managing System
+# School Canteen Managing System
 
 ## Introduction
 
-* [ ]
+This app is designed for shortening the queue in canteen by pre-ordering
 
 ## Targeted Users
 
@@ -10,9 +10,29 @@
 2. Anyone who get a canteen with a **long** queue and wanted to solve the problem
 3. Anyone who wanted to see how a _newbie_ design python app and upload them to github
 
+## Notice on Release files
+
+I have written this app in python, but computers can't run them without installing python shell, so I just converted to EXE.
+
+*EXE conversion is currently unstable*
+
+> **Important Notice**: Snapshots only have python files, no exe versions
+
+### SCMS-WINDOWED-vX.X
+
+This file is for those who want a clear window with GUI only, great for most users
+
+### SCMS-CONSOLE-vX.X
+
+This file if for those who want to look at the console (although logs are in seperate log files)
+
+### SCMS-PYTHON-vX.X
+
+This file is made up of python codes only, reqires python installed on your PC
+
 ## How to use
 
-### account_maker.exe
+### account_maker
 
 This is a file for creating accounts, accounts should be something like this:
 
@@ -22,7 +42,7 @@ This is a file for creating accounts, accounts should be something like this:
 **Warning:** This is a file which can make a huge mess on `students.csv`, file storing students data if used improperly, so this file should not be faced to the public. Instead, this
 should be kept by admins
 
-### ClientsideGUI.exe
+### ClientsideGUI
 
 This is the file which the **students** or **customers** should use, it is for ordering
 
@@ -34,23 +54,23 @@ This is the file which the **students** or **customers** should use, it is for o
 
 **Important Notice**: Server(canteen) should make neccery changes on ServerGUI.exe to update the meals before the clients order!!!
 
-### Graph_shower.exe
+### Graph_shower
 
 Run this file to see the statistics of today's order
 
-### ServerGUI.exe
+### ServerGUI
 
 Type the food names and soup name here, and enter the prices of them. Note that combo price is calculated like this
 Meal Price + Combo(placeholder: _$+?_) = Price of combo
 **Notice**: This file should be kept/executed by the server(canteen)
 
-### students.csv
+### students
 
 This is a file that stores all student's information, and should be kept by admin
 
 > I reccommand admins to use account_maker.exe to add accounts/change passwords unless you are good at editing csvs
 
-### today_menu.csv
+### today_menu
 
 This is a file that stores all menu's information, and should be kept by canteen
 
@@ -63,5 +83,6 @@ Note I am a busy man and a newbie programmer, so please accept my aplogise if I 
 
 ## Next Update checklist
 
-* [ ] Convert .py to .exe
-* [ ] Make this readme better
+* [X] Convert .py to .exe (At least I tried)
+* [X] Make this readme better
+* [ ] Stablise EXE
